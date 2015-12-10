@@ -28,6 +28,7 @@ var jsmpeg = window.jsmpeg = function( url, opts ) {
 	opts = opts || {};
 	this.benchmark = !!opts.benchmark;
 	this.canvas = opts.canvas || document.createElement('canvas');
+	this.audio = opts.audio || null;
 	this.autoplay = !!opts.autoplay;
 	this.loop = !!opts.loop;
 	this.seekable = !!opts.seekable;
@@ -392,14 +393,18 @@ jsmpeg.prototype.play = function(file) {
 	if( this.playing ) { return; }
 	this.targetTime = this.now();
 	this.playing = true;
+	this.audio.play();
 	this.scheduleNextFrame();
 };
 
 jsmpeg.prototype.pause = function(file) {
 	this.playing = false;
+	this.audio.pause();
 };
 
 jsmpeg.prototype.stop = function(file) {
+	this.audio.pause();
+	this.audio.seekable.currentTime = 0;
 	this.currentFrame = -1;
 	if( this.buffer ) {
 		this.buffer.index = this.firstSequenceHeader;
@@ -501,6 +506,13 @@ jsmpeg.prototype.nextFrame = function() {
 
 jsmpeg.prototype.scheduleNextFrame = function() {
 	this.lateTime = this.now() - this.targetTime;
+
+	if (this.audio) {
+		var videoTime = this.currentFrame / this.pictureRate;
+		var audioTime = this.audio.currentTime;
+		this.lateTime = (audioTime - videoTime) * 1000;
+	}
+
 	var wait = Math.max(0, (1000/this.pictureRate) - this.lateTime);
 	this.targetTime = this.now() + wait;
 
